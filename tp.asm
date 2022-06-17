@@ -41,44 +41,25 @@ main:
     call    printf
     call    imprimirVector
 
-pedirModo:
     call    pedirModoOrdenamiento
-    cmp     byte[modoOrdenamiento],'A'
-    je      ascendente
-    cmp     byte[modoOrdenamiento],'D'
-    je      descendente
 
-ascendente:
     mov     rcx,[topeVector]
     mov     [posicion],rcx
     mov     rax,0
     mov     rdx,0
     dec     rcx
     call    BubbleSort
-    jmp     finalizar
-
-descendente:
-    mov     rcx,[topeVector]
-    mov     [posicion],rcx
-    mov     rax,0
-    mov     rdx,0
-    dec     rcx
-    call    BubbleSortDesc
 
 finalizar:
-    mov     rdi,mensajeGuiones
-    sub     rax,rax
-    call    printf    
+    call    imprimirGuiones 
 
     mov     rdi,mensajeVectorFinal
     sub     rax,rax
     call    printf
     mov     rbx,0
-    call    imprimirVector
 
-    mov     rdi,mensajeGuiones
-    sub     rax,rax
-    call    printf
+    call    imprimirVector
+    call    imprimirGuiones
 
 finalPrograma:
 ret
@@ -138,10 +119,9 @@ errorApertura:
 ret
 
 llenarVector:
-    mov     ax,[registro]
+    mov     al,[registro]
     mov     rbx,[topeVector]
-    imul    rbx,rbx,2
-    mov     [vector + rbx],ax
+    mov     [vector + rbx],al
     add     qword[topeVector],1
 ret
 
@@ -151,21 +131,34 @@ BubbleSort:
 loopExterno:
     mov     [posicion],rcx
     mov     r8,0
-    mov     rbx,rcx
+    mov     rbx,rcx     ;mas alla del indice rcx, el vector esta ordenado
 
 loopInterno:
-    mov     ax,[vector+r8*2]
+    mov     al,[vector+r8]
 
     mov     r9,r8
     inc     r9
 
-    mov     dx,[vector+r9*2]
-    cmp     ax,dx
+    mov     dl,[vector+r9]
 
-    jle     noSwap
+    cmp     byte[modoOrdenamiento],'A'
+    je      ascendente
 
-    mov     [vector+r8*2],dx
-    mov     [vector+r9*2],ax
+    cmp     byte[modoOrdenamiento],'D'
+    je      descendente
+
+ascendente:
+    cmp     al,dl
+    jmp     movimiento
+
+descendente:
+    cmp     dl,al
+
+movimiento:
+    jl      noSwap
+
+    mov     [vector+r8],dl
+    mov     [vector+r9],al
 
 noSwap:    
     inc     r8
@@ -181,46 +174,11 @@ noSwap:
     loop    loopExterno
 ret
 
-BubbleSortDesc:
-loopExternoDesc:
-    mov     [posicion],rcx
-    mov     r8,0
-    mov     rbx,rcx
-
-loopInternoDesc:
-    mov     ax,[vector+r8*2]
-
-    mov     r9,r8
-    inc     r9
-
-    mov     dx,[vector+r9*2]
-    cmp     ax,dx
-
-    jge     noSwapDesc
-
-    mov     [vector+r8*2],dx
-    mov     [vector+r9*2],ax
-
-noSwapDesc:    
-    inc     r8
-    dec     rbx
-    cmp     rbx,0
-    jg      loopInternoDesc
-
-    push    rcx
-    call    imprimirIteracion
-    call    imprimirVector
-    pop     rcx
-
-    loop    loopExternoDesc
-ret
-
-
 ;========= Imprimir ===============
 
 imprimirVector:
     mov     rdi,mensaje
-    mov     rsi,[vector+rbx*2]
+    mov     rsi,[vector+rbx]
     sub     rax,rax
     call    printf
 
@@ -241,6 +199,12 @@ imprimirIteracion:
     mov     rax,[topeVector]
     sub     rax,[posicion]
     mov     rsi,rax
+    sub     rax,rax
+    call    printf
+ret
+
+imprimirGuiones:
+    mov     rdi,mensajeGuiones
     sub     rax,rax
     call    printf
 ret
