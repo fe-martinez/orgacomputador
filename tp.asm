@@ -12,9 +12,9 @@ section     .data
     mensajeErrorApertura    db  "El archivo no pudo ser abierto, ingrese el nombre nuevamente",10,0
     mensajeArchivoVacio     db  "El archivo ingresado esta vacio",10,0
     mensajeTruncamiento     db  "~~AVISO: El archivo ingresado tiene mas de 30 numeros, el vector fue llenado con los primeros 30 valores.~~",10,10,0
-    mensajePasosIntermedios db  "¿Desea que se muestren los pasos intermedios? (Y/n): ",0
+    mensajePasosIntermedios db  "¿Desea que se muestren los pasos intermedios? (Y para mostrar solo la siguiente iteracion, N para mostrar todas las iteraciones, X para mostrar solo el resultado final): ",0
     mensajeIteracion        db  "->Estado del vector despues de la iteracion %i:",10,0
-    mensajeSwap             db  "Intercambian la posicion %hhi y %hhi",10,0
+    mensajeSigIteracion     db  "¿Desea mostrar solo la siguiente iteracion? (Y para mostrar la siguiente iteracion/N para mostrar todo hasta el final/X para mostrar solo el resultado): ",0
     mensajeVectorInicial    db  "Vector cargado: ",10,0
     mensajeVectorFinalAsc   db  "Vector ordenado de manera ascendente: ",10,0
     mensajeVectorFinalDes   db  "Vector ordenado de manera descendente: ",10,0
@@ -30,6 +30,7 @@ section     .bss
     fileNameP                   resb 50
     modoOrdenamiento            resb 4
     mostrarIntermedios          resb 4
+    mostrarIntermediosMedio     resb 4
     inputValido                 resb 1
     vector          times 30    resb 1
     posicion                    resq 1
@@ -82,7 +83,6 @@ abrirArchivo:
 
     mov     qword[fileHandle],rax
 
-
 leerArchivo:
     mov     rdi,registro
     mov     rsi,1
@@ -93,12 +93,14 @@ leerArchivo:
     cmp     rax,0
     jle     endOfFile
 
+    ;Lee el archivo mientras haya datos
     call    llenarVector
     jmp     leerArchivo
 
 endOfFile:
 ret
 
+;Vuelve a pedir el nombre del archivo
 errorApertura:
     mov     byte[inputValido],'N'
     mov     rdi,mensajeErrorApertura
@@ -113,6 +115,7 @@ llenarVector:
     add     qword[topeVector],1
 ret
 
+;Por enunciado, n <= 30, 0 y 1 se tratan como casos borde
 validarCantidad:
     cmp     qword[topeVector],0
     je      imprimirVectorVacio
@@ -131,6 +134,7 @@ validarCantidad:
 ;=========================================================
 ;                   MODO DE ORDENAMIENTO
 ;=========================================================
+;A/a para ascendente, D/d para descendente.
 tipoOrdenamiento:
     call    pedirModoOrdenamiento
     call    validarModoOrdenamiento
@@ -172,6 +176,7 @@ ret
 ;=========================================================
 ;              MOSTRAR PASOS INTERMEDIOS
 ;=========================================================
+;Y/y para mostrar la siguiente iteracion, N/n para mostrar todas las iteraciones juntas, X/x para mostrar solo el resultado
 mostrarPasosIntermedios:
     call    preguntarPasosIntermedios
     call    validarPasosIntermedios
@@ -194,6 +199,12 @@ validarPasosIntermedios:
     cmp     byte[mostrarIntermedios],'n'
     je      validoMinusculaIntermedio
 
+    cmp     byte[mostrarIntermedios],'X'
+    je      validoIntermedio
+
+    cmp     byte[mostrarIntermedios],'x'
+    je      validoMinusculaIntermedio
+
     mov     byte[inputValido],'N'
 
 validoMinusculaIntermedio:
@@ -209,17 +220,16 @@ BubbleSort:
     mov     rax,0
     mov     rdx,0
     dec     rcx
+
 loopExterno:
     mov     [posicion],rcx
     mov     r8,0
-    mov     rbx,rcx     ;mas alla del indice rcx, el vector esta ordenado
+    mov     rbx,rcx     ;mas alla del indice en rcx, el vector esta ordenado
 
 loopInterno:
     mov     al,[vector+r8]
-
     mov     r9,r8
     inc     r9
-
     mov     dl,[vector+r9]
 
     cmp     byte[modoOrdenamiento],'A'
@@ -228,6 +238,7 @@ loopInterno:
     cmp     byte[modoOrdenamiento],'D'
     je      descendente
 
+;Se comparan i e i+1, se hace un swap en el vector si estan desordenados
 ascendente:
     cmp     al,dl
     jmp     movimiento
@@ -247,16 +258,24 @@ noSwap:
     cmp     rbx,0
     jg      loopInterno
 
+    push    rcx
+    ;Si el user ingreso y, se le pregunta que quiere hacer, si ingreso N se imprimen todas las iteraciones sin preguntar.
+    cmp     byte[mostrarIntermedios],'X'
+    je      continuarOrdenamiento
+
+    call    imprimirIteracion
+    call    imprimirVector
+
     cmp     byte[mostrarIntermedios],'N'
     je      continuarOrdenamiento
 
-    push    rcx
-    call    imprimirIteracion
-    call    imprimirVector
-    pop     rcx
-
+    call    imprimirSiguienteIter
+    call    validarPasosIntermedios
 continuarOrdenamiento:
-    loop    loopExterno
+    pop     rcx
+    dec     rcx
+    cmp     rcx,0
+    jg      loopExterno ;cmp y jg porque excede el near jump
 ret
 
 ;=========================================================
@@ -318,6 +337,15 @@ imprimirIteracion:
     mov     rsi,rax
     sub     rax,rax
     call    printf
+ret
+
+imprimirSiguienteIter:
+    mov     rdi,mensajeSigIteracion
+    sub     rax,rax
+    call    printf
+
+    mov     rdi,mostrarIntermedios
+    call    gets
 ret
 
 imprimirMensajeFinal:
