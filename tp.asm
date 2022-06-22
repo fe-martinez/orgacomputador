@@ -7,8 +7,10 @@ extern  gets
 section     .data
     fileName                db  "listado.dat",0
     mensajeIngreso          db  "Ingrese el nombre del archivo a ordenar: ",0
-    mensajeIngresoOrd       db  "Ingrese el caracer A para ordenar de manera ascendente, D para hacerlo de manera descendente: ",0
+    mensajeIngresoOrd       db  "Ingrese A para ordenar de manera ascendente, D para hacerlo de manera descendente: ",0
     mensajeErrorApertura    db  "El archivo no pudo ser abierto, ingrese el nombre nuevamente",10,0
+    mensajeArchivoVacio     db  "El archivo ingresado esta vacio",10,0
+    mensajePasosIntermedios db  "¿Desea que se muestren los pasos intermedios? (Y/n): ",0
     mensajeIteracion        db  "Estado del vector despues de la iteracion %i:",10,0
     mensajeSwap             db  "Intercambian la posicion %hhi y %hhi",10,0
     mensajeVectorInicial    db  "Vector cargado: ",10,0
@@ -24,6 +26,7 @@ section     .data
 section     .bss
     fileNameP                   resb 50
     modoOrdenamiento            resb 1
+    mostrarIntermedios          resb 1
     inputValido                 resb 1
     vector          times 30    resb 1
     posicion                    resq 1
@@ -35,14 +38,22 @@ main:
     cmp     byte[inputValido],'N'
     je      main
 
-    mov     rbx,0
-    mov     rdi,mensajeVectorInicial
-    sub     rax,rax
-    call    printf
-    call    imprimirVector
+    call    imprimirInicial
+    jmp     validarCantidad
 
+tipoOrdenamiento:
     call    pedirModoOrdenamiento
+    call    validarModoOrdenamiento
+    cmp     byte[inputValido],'N'
+    je      tipoOrdenamiento
 
+mostrarPasosIntermedios:
+    call    preguntarPasosIntermedios
+    call    validarPasosIntermedios
+    cmp     byte[inputValido],'N'
+    je      mostrarPasosIntermedios
+
+ordenamiento:
     mov     rcx,[topeVector]
     mov     [posicion],rcx
     mov     rax,0
@@ -52,18 +63,14 @@ main:
 
 finalizar:
     call    imprimirGuiones 
-
-    mov     rdi,mensajeVectorFinal
-    sub     rax,rax
-    call    printf
-    mov     rbx,0
-
+    call    imprimirMensajeFinal
     call    imprimirVector
     call    imprimirGuiones
 
 finalPrograma:
 ret
 
+;=====================Solicitar ingresos=================
 pedirNombreArchivo:
     mov     rdi,mensajeIngreso
     sub     rax,rax
@@ -81,6 +88,7 @@ pedirModoOrdenamiento:
     mov     rdi,modoOrdenamiento
     call    gets
 ret
+
 
 ;======== Archivo ==================
 abrirArchivo:
@@ -166,15 +174,100 @@ noSwap:
     cmp     rbx,0
     jg      loopInterno
 
+    cmp     byte[mostrarIntermedios],'N'
+    je      continuarOrdenamiento
+
     push    rcx
     call    imprimirIteracion
     call    imprimirVector
     pop     rcx
 
+continuarOrdenamiento:
     loop    loopExterno
 ret
 
+;========= Validaciones ===========
+validarModoOrdenamiento:
+    mov     byte[inputValido],'S'
+
+    cmp     byte[modoOrdenamiento],'A'
+    je      valido
+
+    cmp     byte[modoOrdenamiento],'a'
+    je      validoMinuscula
+
+    cmp     byte[modoOrdenamiento],'D'
+    je      valido
+
+    cmp     byte[modoOrdenamiento],'d'
+    je      validoMinuscula
+
+    mov     byte[inputValido],'N'
+
+validoMinuscula:
+    sub     byte[modoOrdenamiento],20h ;En la tabla ascii, las minusculas estan a 20h lugares de las mayusculas.
+valido:
+ret
+
+validarCantidad:
+    cmp     qword[topeVector],0
+    je      vectorVacio
+ 
+    cmp     qword[topeVector],1
+    je      finalizar
+
+    jmp     tipoOrdenamiento
+
+validarPasosIntermedios:
+    mov     byte[inputValido],'S'
+
+    cmp     byte[mostrarIntermedios],'Y'
+    je      validoIntermedio
+
+    cmp     byte[mostrarIntermedios],'y'
+    je      validoMinusculaIntermedio
+
+    cmp     byte[mostrarIntermedios],'N'
+    je      validoIntermedio
+
+    cmp     byte[mostrarIntermedios],'n'
+    je      validoMinusculaIntermedio
+
+    mov     byte[inputValido],'N'
+
+validoMinusculaIntermedio:
+    sub     byte[mostrarIntermedios],20h
+validoIntermedio:
+ret
+
 ;========= Imprimir ===============
+
+imprimirInicial:
+    mov     rbx,0
+    mov     rdi,mensajeVectorInicial
+    sub     rax,rax
+    call    printf
+    call    imprimirVector
+ret
+
+preguntarPasosIntermedios:
+    mov     rdi,mensajePasosIntermedios
+    sub     rax,rax
+    call    printf
+
+    mov     rdi,mostrarIntermedios
+    call    gets
+ret
+
+ret
+
+vectorVacio:
+    mov     rdi,mensajeArchivoVacio
+    sub     rax,rax
+    call    printf
+    mov     rbx,0
+
+    jmp     finalPrograma
 
 imprimirVector:
     mov     rdi,mensaje
@@ -201,6 +294,13 @@ imprimirIteracion:
     mov     rsi,rax
     sub     rax,rax
     call    printf
+ret
+
+imprimirMensajeFinal:
+    mov     rdi,mensajeVectorFinal
+    sub     rax,rax
+    call    printf
+    mov     rbx,0
 ret
 
 imprimirGuiones:
