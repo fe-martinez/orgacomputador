@@ -4,18 +4,21 @@ extern  fopen
 extern  fread
 extern  gets
 
+;BubbleSort con numeros en BPF c/signo de 8bits. Cada byte del archivo representa a uno de los numeros.
+
 section     .data
-    fileName                db  "listado.dat",0
     mensajeIngreso          db  "Ingrese el nombre del archivo a ordenar: ",0
     mensajeIngresoOrd       db  "Ingrese A para ordenar de manera ascendente, D para hacerlo de manera descendente: ",0
     mensajeErrorApertura    db  "El archivo no pudo ser abierto, ingrese el nombre nuevamente",10,0
     mensajeArchivoVacio     db  "El archivo ingresado esta vacio",10,0
+    mensajeTruncamiento     db  "~~AVISO: El archivo ingresado tiene mas de 30 numeros, el vector fue llenado con los primeros 30 valores.~~",10,10,0
     mensajePasosIntermedios db  "¿Desea que se muestren los pasos intermedios? (Y/n): ",0
-    mensajeIteracion        db  "Estado del vector despues de la iteracion %i:",10,0
+    mensajeIteracion        db  "->Estado del vector despues de la iteracion %i:",10,0
     mensajeSwap             db  "Intercambian la posicion %hhi y %hhi",10,0
     mensajeVectorInicial    db  "Vector cargado: ",10,0
-    mensajeVectorFinal      db  "Vector ordenado: ",10,0
-    mensajeGuiones          db  "----------------------------------------------------",10,10,0
+    mensajeVectorFinalAsc   db  "Vector ordenado de manera ascendente: ",10,0
+    mensajeVectorFinalDes   db  "Vector ordenado de manera descendente: ",10,0
+    mensajeGuiones          db  "////////////////////////////////////////////////////////////////////",10,0
     modo                    db  "rb",0
     mensaje                 db  "| %hhi |",0
     espacio                 db  10,10,0
@@ -25,52 +28,40 @@ section     .data
 
 section     .bss
     fileNameP                   resb 50
-    modoOrdenamiento            resb 1
-    mostrarIntermedios          resb 1
+    modoOrdenamiento            resb 4
+    mostrarIntermedios          resb 4
     inputValido                 resb 1
     vector          times 30    resb 1
     posicion                    resq 1
 
 section     .text
+;=========================================================
+;                       MAIN
+;=========================================================
 main:
-    call    pedirNombreArchivo
-    call    abrirArchivo
-    cmp     byte[inputValido],'N'
-    je      main
-
-    call    imprimirInicial
+    call    procesarArchivo
     jmp     validarCantidad
+cantidadesOk:
+    call    imprimirInicial
+    call    tipoOrdenamiento
+    call    mostrarPasosIntermedios
 
-tipoOrdenamiento:
-    call    pedirModoOrdenamiento
-    call    validarModoOrdenamiento
-    cmp     byte[inputValido],'N'
-    je      tipoOrdenamiento
-
-mostrarPasosIntermedios:
-    call    preguntarPasosIntermedios
-    call    validarPasosIntermedios
-    cmp     byte[inputValido],'N'
-    je      mostrarPasosIntermedios
-
-ordenamiento:
-    mov     rcx,[topeVector]
-    mov     [posicion],rcx
-    mov     rax,0
-    mov     rdx,0
-    dec     rcx
     call    BubbleSort
-
-finalizar:
-    call    imprimirGuiones 
+mensajeFinal:
     call    imprimirMensajeFinal
-    call    imprimirVector
-    call    imprimirGuiones
-
 finalPrograma:
 ret
 
-;=====================Solicitar ingresos=================
+;=========================================================
+;                   MANEJO DE ARCHIVO
+;=========================================================
+procesarArchivo:
+    call    pedirNombreArchivo
+    call    abrirArchivo
+    cmp     byte[inputValido],'N'
+    je      procesarArchivo
+ret
+
 pedirNombreArchivo:
     mov     rdi,mensajeIngreso
     sub     rax,rax
@@ -80,17 +71,6 @@ pedirNombreArchivo:
     call    gets
 ret
 
-pedirModoOrdenamiento:
-    mov     rdi,mensajeIngresoOrd
-    sub     rax,rax
-    call    printf
-
-    mov     rdi,modoOrdenamiento
-    call    gets
-ret
-
-
-;======== Archivo ==================
 abrirArchivo:
     mov     byte[inputValido],'S'
 
@@ -133,9 +113,102 @@ llenarVector:
     add     qword[topeVector],1
 ret
 
-;============== BubbleSort ===================
+validarCantidad:
+    cmp     qword[topeVector],0
+    je      imprimirVectorVacio
+ 
+    cmp     qword[topeVector],1
+    je      mensajeFinal
 
+    cmp     qword[topeVector],30
+    jle     cantidadesOk
+
+    ;Se trunca a 30 por enunciado.
+    mov     qword[topeVector],30
+    call    imprimirAvisoTruncamiento
+    jmp     cantidadesOk
+
+;=========================================================
+;                   MODO DE ORDENAMIENTO
+;=========================================================
+tipoOrdenamiento:
+    call    pedirModoOrdenamiento
+    call    validarModoOrdenamiento
+    cmp     byte[inputValido],'N'
+    je      tipoOrdenamiento
+ret
+
+pedirModoOrdenamiento:
+    mov     rdi,mensajeIngresoOrd
+    sub     rax,rax
+    call    printf
+
+    mov     rdi,modoOrdenamiento
+    call    gets
+ret
+
+validarModoOrdenamiento:
+    mov     byte[inputValido],'S'
+
+    cmp     byte[modoOrdenamiento],'A'
+    je      valido
+
+    cmp     byte[modoOrdenamiento],'a'
+    je      validoMinuscula
+
+    cmp     byte[modoOrdenamiento],'D'
+    je      valido
+
+    cmp     byte[modoOrdenamiento],'d'
+    je      validoMinuscula
+
+    mov     byte[inputValido],'N'
+
+validoMinuscula:
+    sub     byte[modoOrdenamiento],20h ;En la tabla ascii, las minusculas estan a 20h lugares de las mayusculas.
+valido:
+ret
+
+;=========================================================
+;              MOSTRAR PASOS INTERMEDIOS
+;=========================================================
+mostrarPasosIntermedios:
+    call    preguntarPasosIntermedios
+    call    validarPasosIntermedios
+    cmp     byte[inputValido],'N'
+    je      mostrarPasosIntermedios
+ret
+
+validarPasosIntermedios:
+    mov     byte[inputValido],'S'
+
+    cmp     byte[mostrarIntermedios],'Y'
+    je      validoIntermedio
+
+    cmp     byte[mostrarIntermedios],'y'
+    je      validoMinusculaIntermedio
+
+    cmp     byte[mostrarIntermedios],'N'
+    je      validoIntermedio
+
+    cmp     byte[mostrarIntermedios],'n'
+    je      validoMinusculaIntermedio
+
+    mov     byte[inputValido],'N'
+
+validoMinusculaIntermedio:
+    sub     byte[mostrarIntermedios],20h
+validoIntermedio:
+ret
+
+;=========================================================
+;                   BUBBLE SORT
+;=========================================================
 BubbleSort:
+    mov     rcx,[topeVector]
+    mov     rax,0
+    mov     rdx,0
+    dec     rcx
 loopExterno:
     mov     [posicion],rcx
     mov     r8,0
@@ -186,62 +259,9 @@ continuarOrdenamiento:
     loop    loopExterno
 ret
 
-;========= Validaciones ===========
-validarModoOrdenamiento:
-    mov     byte[inputValido],'S'
-
-    cmp     byte[modoOrdenamiento],'A'
-    je      valido
-
-    cmp     byte[modoOrdenamiento],'a'
-    je      validoMinuscula
-
-    cmp     byte[modoOrdenamiento],'D'
-    je      valido
-
-    cmp     byte[modoOrdenamiento],'d'
-    je      validoMinuscula
-
-    mov     byte[inputValido],'N'
-
-validoMinuscula:
-    sub     byte[modoOrdenamiento],20h ;En la tabla ascii, las minusculas estan a 20h lugares de las mayusculas.
-valido:
-ret
-
-validarCantidad:
-    cmp     qword[topeVector],0
-    je      vectorVacio
- 
-    cmp     qword[topeVector],1
-    je      finalizar
-
-    jmp     tipoOrdenamiento
-
-validarPasosIntermedios:
-    mov     byte[inputValido],'S'
-
-    cmp     byte[mostrarIntermedios],'Y'
-    je      validoIntermedio
-
-    cmp     byte[mostrarIntermedios],'y'
-    je      validoMinusculaIntermedio
-
-    cmp     byte[mostrarIntermedios],'N'
-    je      validoIntermedio
-
-    cmp     byte[mostrarIntermedios],'n'
-    je      validoMinusculaIntermedio
-
-    mov     byte[inputValido],'N'
-
-validoMinusculaIntermedio:
-    sub     byte[mostrarIntermedios],20h
-validoIntermedio:
-ret
-
-;========= Imprimir ===============
-
+;=========================================================
+;                       MENSAJES
+;=========================================================
 imprimirInicial:
     mov     rbx,0
     mov     rdi,mensajeVectorInicial
@@ -259,15 +279,19 @@ preguntarPasosIntermedios:
     call    gets
 ret
 
-ret
-
-vectorVacio:
+imprimirVectorVacio:
     mov     rdi,mensajeArchivoVacio
     sub     rax,rax
     call    printf
     mov     rbx,0
-
+    ;Hace un salto directamente al final del programa.
     jmp     finalPrograma
+
+imprimirAvisoTruncamiento:
+    mov     rdi,mensajeTruncamiento
+    sub     rax,rax
+    call    printf
+ret
 
 imprimirVector:
     mov     rdi,mensaje
@@ -297,10 +321,26 @@ imprimirIteracion:
 ret
 
 imprimirMensajeFinal:
-    mov     rdi,mensajeVectorFinal
+    call    imprimirGuiones
+    cmp     byte[modoOrdenamiento],'A'
+    je      msjAscendente
+
+    cmp     byte[modoOrdenamiento],'D'
+    je      msjDescendente
+
+msjAscendente:
+    mov     rdi,mensajeVectorFinalAsc
+    jmp     continuarFinal
+
+msjDescendente:
+    mov     rdi,mensajeVectorFinalDes
+
+continuarFinal:
     sub     rax,rax
     call    printf
     mov     rbx,0
+    call    imprimirVector
+    call    imprimirGuiones
 ret
 
 imprimirGuiones:
