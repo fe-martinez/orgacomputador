@@ -20,10 +20,10 @@ section     .data
     mensajeVectorInicial    db  "Vector cargado: ",10,0
     mensajeVectorFinalAsc   db  "~~~~Vector ordenado de manera ascendente~~~~",10,0
     mensajeVectorFinalDes   db  "~~~~Vector ordenado de manera descendente~~~~",10,0
-    mensajeGuiones          db  "////////////////////////////////////////////////////////////////////",10,0
+    mensajeGuiones          db  "====================================================================================================",10,0
     mensajeSwap             db  "->>> Se intercambian %hhi y %hhi",10,0
     modo                    db  "rb",0
-    mensaje                 db  "| %hhi |",0
+    mensaje                 db  "  %hhi  ",0
     espacio                 db  10,0
     dobleEspacio            db  10,10,0
     fileHandle              dq  0
@@ -230,7 +230,7 @@ loopExterno:
     call    imprimirInicioIteracion
 noImprimirIteracion:
     mov     r8,0
-    mov     rbx,rcx     ;mas alla del indice en rcx, el vector esta ordenado
+    mov     rbx,rcx     ;mas alla del indice de rcx, el vector esta ordenado
     mov     rax,0       
     mov     rdx,0
     mov     r12,0
@@ -246,7 +246,7 @@ loopInterno:
 
     cmp     byte[modoOrdenamiento],'D'
     je      descendente
-;Se comparan i e i+1, se hace un swap en el vector si estan desordenados
+;Se comparan i e i+1, se hace un swap en el vector si estan desordenados.
 ascendente:
     cmp     al,dl
     jmp     movimiento
@@ -261,6 +261,7 @@ movimiento:
     inc     r12
     mov     r10,[vector+r9]
     mov     r11,[vector+r8]
+    ;Si el usuario ingreso X, no se imprimen los resultados intermedios.
     cmp     byte[mostrarIntermedios],'X'
     je      noSwap
     call    imprimirSwap
@@ -269,15 +270,16 @@ noSwap:
     inc     r8
     dec     rbx
     cmp     rbx,0
-    jg      loopInterno ;Todavia queda parte del vector por iterar.
+    jg      loopInterno     ;Todavia queda parte del vector por recorrer en esta iteracion.
+
     push    rcx
     ;Si el user ingreso x, no se imprimen las iteraciones.
     cmp     byte[mostrarIntermedios],'X'
     je      continuarOrdenamiento
-    
+
     cmp     r12,0
-    jne     continuarImprimiendo
-    call    imprimirNoHuboSwaps
+    jne     continuarImprimiendo    ;Si hubo swaps en esta iteracion
+    call    imprimirNoHuboSwaps     ;Si no los hubo
 
 continuarImprimiendo:
     call    imprimirIteracion
@@ -288,6 +290,7 @@ continuarImprimiendo:
     call    imprimirSiguienteIter
     call    validarPasosIntermedios
     call    imprimirEspacio
+
 continuarOrdenamiento:
     pop     rcx
     dec     rcx
@@ -298,6 +301,7 @@ ret
 ;=========================================================
 ;                       MENSAJES
 ;=========================================================
+;Imprime el vector cargado desde el archivo
 imprimirInicial:
     call    imprimirGuiones
     mov     rbx,0
@@ -308,6 +312,7 @@ imprimirInicial:
     call    imprimirGuiones
 ret
 
+;Pregunta al user si quiere ver los pasos intermedios y de que manera
 preguntarPasosIntermedios:
     mov     rdi,mensajePasosIntermedios
     sub     rax,rax
@@ -317,6 +322,7 @@ preguntarPasosIntermedios:
     call    gets
 ret
 
+;Si se envia un archivo de 0 bytes
 imprimirVectorVacio:
     mov     rdi,mensajeArchivoVacio
     sub     rax,rax
@@ -325,12 +331,14 @@ imprimirVectorVacio:
     ;Hace un salto directamente al final del programa.
     jmp     finalPrograma
 
+;Si se envia un archivo con mas de 30 numeros
 imprimirAvisoTruncamiento:
     mov     rdi,mensajeTruncamiento
     sub     rax,rax
     call    printf
 ret
 
+;Imprime el vector de la variable vector, tiene que venir con un topeVector y rbx en 0.
 imprimirVector:
     mov     rdi,mensaje
     mov     rsi,[vector+rbx]
@@ -353,6 +361,7 @@ imprimirSwap:
     mov     rsi,r10
     mov     rdx,r11
     sub     rax,rax
+    ;Para que el printf no afecte a las variables en el medio de la iteracion.
     push    rcx
     push    rbx
     push    r8
@@ -362,6 +371,7 @@ imprimirSwap:
     pop     rcx
 ret
 
+;topeVector - posicion = nro de iteracion actual
 imprimirInicioIteracion:
     mov     rdi,mensajeInicioIteracion
     mov     rax,[topeVector]
@@ -374,6 +384,7 @@ imprimirInicioIteracion:
     pop     rcx
 ret
 
+;Imprime el vector con un borde
 imprimirIteracion:
     call    imprimirEspacio
     call    imprimirGuiones
@@ -390,6 +401,7 @@ imprimirIteracion:
     call    imprimirEspacio
 ret
 
+;Pregunta al usuario si desea recorrer 1 a 1 las iteraciones
 imprimirSiguienteIter:
     mov     rdi,mensajeSigIteracion
     sub     rax,rax
@@ -399,6 +411,7 @@ imprimirSiguienteIter:
     call    gets
 ret
 
+;Imprime el mensaje de vector ordenado junto con el vector.
 imprimirMensajeFinal:
     call    imprimirGuiones
     cmp     byte[modoOrdenamiento],'A'
@@ -422,6 +435,7 @@ continuarFinal:
     call    imprimirGuiones
 ret
 
+;Imprime 10,10,0
 imprimirEspacio:
     mov     rdi,dobleEspacio
     sub     rax,rax
