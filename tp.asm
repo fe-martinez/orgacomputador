@@ -32,11 +32,11 @@ section     .data
 
 section     .bss
     fileName                    resb 50
+    vector          times 30    resb 1
     modoOrdenamiento            resb 4
     mostrarIntermedios          resb 4
     mostrarIntermediosMedio     resb 4
     inputValido                 resb 1
-    vector          times 30    resb 1
     posicion                    resq 1
 
 section     .text
