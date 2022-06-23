@@ -12,22 +12,26 @@ section     .data
     mensajeErrorApertura    db  "El archivo no pudo ser abierto, ingrese el nombre nuevamente",10,0
     mensajeArchivoVacio     db  "El archivo ingresado esta vacio",10,0
     mensajeTruncamiento     db  "~~AVISO: El archivo ingresado tiene mas de 30 numeros, el vector fue llenado con los primeros 30 valores.~~",10,10,0
-    mensajePasosIntermedios db  "¿Desea que se muestren los pasos intermedios? (Y para mostrar solo la siguiente iteracion, N para mostrar todas las iteraciones, X para mostrar solo el resultado final): ",0
-    mensajeIteracion        db  "->Estado del vector despues de la iteracion %i:",10,0
+    mensajePasosIntermedios db  "¿Desea que se muestren los pasos intermedios uno a uno? (Y para mostrar solo la siguiente iteracion, N para mostrar todas las iteraciones, X para mostrar solo el resultado final): ",0
+    mensajeInicioIteracion  db  "-> Iteracion N°%i:",10,0
+    mensajeFinIteracion     db  "-> Estado del vector despues de la iteracion %i:",10,0
+    mensajeNoSwaps          db  "No hubo swaps en esta iteracion",0
     mensajeSigIteracion     db  "¿Desea mostrar solo la siguiente iteracion? (Y para mostrar la siguiente iteracion/N para mostrar todo hasta el final/X para mostrar solo el resultado): ",0
     mensajeVectorInicial    db  "Vector cargado: ",10,0
-    mensajeVectorFinalAsc   db  "Vector ordenado de manera ascendente: ",10,0
-    mensajeVectorFinalDes   db  "Vector ordenado de manera descendente: ",10,0
+    mensajeVectorFinalAsc   db  "~~~~Vector ordenado de manera ascendente~~~~",10,0
+    mensajeVectorFinalDes   db  "~~~~Vector ordenado de manera descendente~~~~",10,0
     mensajeGuiones          db  "////////////////////////////////////////////////////////////////////",10,0
+    mensajeSwap             db  "->>> Se intercambian %hhi y %hhi",10,0
     modo                    db  "rb",0
     mensaje                 db  "| %hhi |",0
-    espacio                 db  10,10,0
+    espacio                 db  10,0
+    dobleEspacio            db  10,10,0
     fileHandle              dq  0
     topeVector              dq  0
     registro                db  0
 
 section     .bss
-    fileNameP                   resb 50
+    fileName                    resb 50
     modoOrdenamiento            resb 4
     mostrarIntermedios          resb 4
     mostrarIntermediosMedio     resb 4
@@ -68,14 +72,14 @@ pedirNombreArchivo:
     sub     rax,rax
     call    printf
 
-    mov     rdi,fileNameP
+    mov     rdi,fileName
     call    gets
 ret
 
 abrirArchivo:
     mov     byte[inputValido],'S'
 
-    mov     rdi,fileNameP
+    mov     rdi,fileName
     mov     rsi,modo
     call    fopen
     cmp     rax,0
@@ -217,14 +221,19 @@ ret
 ;=========================================================
 BubbleSort:
     mov     rcx,[topeVector]
-    mov     rax,0
-    mov     rdx,0
     dec     rcx
 
 loopExterno:
     mov     [posicion],rcx
+    cmp     byte[mostrarIntermedios],'X'
+    je      noImprimirIteracion
+    call    imprimirInicioIteracion
+noImprimirIteracion:
     mov     r8,0
     mov     rbx,rcx     ;mas alla del indice en rcx, el vector esta ordenado
+    mov     rax,0       
+    mov     rdx,0
+    mov     r12,0
 
 loopInterno:
     mov     al,[vector+r8]
@@ -237,40 +246,48 @@ loopInterno:
 
     cmp     byte[modoOrdenamiento],'D'
     je      descendente
-
 ;Se comparan i e i+1, se hace un swap en el vector si estan desordenados
 ascendente:
     cmp     al,dl
     jmp     movimiento
-
 descendente:
     cmp     dl,al
-
 movimiento:
     jl      noSwap
 
-    mov     [vector+r8],dl
-    mov     [vector+r9],al
+    mov     byte[vector+r8],dl
+    mov     byte[vector+r9],al
+
+    inc     r12
+    mov     r10,[vector+r9]
+    mov     r11,[vector+r8]
+    cmp     byte[mostrarIntermedios],'X'
+    je      noSwap
+    call    imprimirSwap
 
 noSwap:    
     inc     r8
     dec     rbx
     cmp     rbx,0
-    jg      loopInterno
-
+    jg      loopInterno ;Todavia queda parte del vector por iterar.
     push    rcx
-    ;Si el user ingreso y, se le pregunta que quiere hacer, si ingreso N se imprimen todas las iteraciones sin preguntar.
+    ;Si el user ingreso x, no se imprimen las iteraciones.
     cmp     byte[mostrarIntermedios],'X'
     je      continuarOrdenamiento
+    
+    cmp     r12,0
+    jne     continuarImprimiendo
+    call    imprimirNoHuboSwaps
 
+continuarImprimiendo:
     call    imprimirIteracion
-    call    imprimirVector
-
+    ;Si el user ingreso y, se le pregunta que quiere hacer, si ingreso N se imprimen todas las iteraciones sin preguntar.
     cmp     byte[mostrarIntermedios],'N'
     je      continuarOrdenamiento
 
     call    imprimirSiguienteIter
     call    validarPasosIntermedios
+    call    imprimirEspacio
 continuarOrdenamiento:
     pop     rcx
     dec     rcx
@@ -282,11 +299,13 @@ ret
 ;                       MENSAJES
 ;=========================================================
 imprimirInicial:
+    call    imprimirGuiones
     mov     rbx,0
     mov     rdi,mensajeVectorInicial
     sub     rax,rax
     call    printf
     call    imprimirVector
+    call    imprimirGuiones
 ret
 
 preguntarPasosIntermedios:
@@ -329,14 +348,46 @@ finImprimir:
     call    printf
 ret
 
+imprimirSwap:
+    mov     rdi,mensajeSwap
+    mov     rsi,r10
+    mov     rdx,r11
+    sub     rax,rax
+    push    rcx
+    push    rbx
+    push    r8
+    call    printf
+    pop     r8
+    pop     rbx
+    pop     rcx
+ret
+
+imprimirInicioIteracion:
+    mov     rdi,mensajeInicioIteracion
+    mov     rax,[topeVector]
+    sub     rax,[posicion]
+    mov     rsi,rax
+    sub     rax,rax
+    sub     rax,rax
+    push    rcx
+    call    printf
+    pop     rcx
+ret
 
 imprimirIteracion:
-    mov     rdi,mensajeIteracion
+    call    imprimirEspacio
+    call    imprimirGuiones
+
+    mov     rdi,mensajeFinIteracion
     mov     rax,[topeVector]
     sub     rax,[posicion]
     mov     rsi,rax
     sub     rax,rax
     call    printf
+
+    call    imprimirVector
+    call    imprimirGuiones
+    call    imprimirEspacio
 ret
 
 imprimirSiguienteIter:
@@ -371,8 +422,20 @@ continuarFinal:
     call    imprimirGuiones
 ret
 
+imprimirEspacio:
+    mov     rdi,dobleEspacio
+    sub     rax,rax
+    call    printf
+ret
+
 imprimirGuiones:
     mov     rdi,mensajeGuiones
+    sub     rax,rax
+    call    printf
+ret
+
+imprimirNoHuboSwaps:
+    mov     rdi,mensajeNoSwaps
     sub     rax,rax
     call    printf
 ret
