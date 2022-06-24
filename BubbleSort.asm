@@ -24,6 +24,12 @@ section     .data
     mensajeSwap             db  "->>> Se intercambian %hhi y %hhi",10,0
     modo                    db  "rb",0
     mensaje                 db  "  %hhi  ",0
+    ;Con NASM se pueden usar los caracteres especiales de C pero si se declaran entre backquotes. https://nasm.us/doc/nasmdoc3.html seccion 3.4.2.
+    ;Si los fondos de colores causan problemas, se tiene que reemplazar el call a imprimirVectorColores en imprimirSwap con un call a imprimirVector.
+    fondoColor              db  `\033[100m`,0
+    fondoColorSegundo       db  `\033[30;47m`,0
+    fondoNormal             db  `\033[0m`,0
+    
     espacio                 db  10,0
     dobleEspacio            db  10,10,0
     fileHandle              dq  0
@@ -356,18 +362,63 @@ finImprimir:
     call    printf
 ret
 
+;Imprime el vector usando codigos de escape ANSI.
+imprimirVectorColor:
+    cmp     r12,rbx
+    jne     chequearSegundo
+
+    mov     rdi,fondoColor
+    sub     rax,rax
+    call    printf
+    jmp     continuarSinColor
+
+chequearSegundo:
+    cmp     r13,rbx
+    jne     continuarSinColor
+
+    mov     rdi,fondoColorSegundo
+    sub     rax,rax
+    call    printf
+    jmp     continuarSinColor
+
+continuarSinColor:
+    mov     rdi,mensaje
+    mov     rsi,[vector+rbx]
+    sub     rax,rax
+    call    printf
+
+    mov     rdi,fondoNormal
+    sub     rax,rax
+    call    printf
+
+    add     rbx,1
+    cmp     rbx,qword[topeVector]
+    jl      imprimirVectorColor
+    jg      finImprimirColor
+
+finImprimirColor:
+    mov     rdi,espacio
+    sub     rax,rax
+    call    printf
+ret
+
+
 imprimirSwap:
+    mov     r12,r8
+    mov     r13,r9
     mov     rdi,mensajeSwap
     mov     rsi,r10
     mov     rdx,r11
     sub     rax,rax
+
     ;Para que el printf no afecte a las variables en el medio de la iteracion.
     push    rcx
     push    rbx
     push    r8
     call    printf
+
     mov     rbx,0
-    call    imprimirVector
+    call    imprimirVectorColor
 
     pop     r8
     pop     rbx
