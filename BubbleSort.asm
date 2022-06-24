@@ -12,7 +12,7 @@ section     .data
     mensajeErrorApertura    db  "El archivo no pudo ser abierto, ingrese el nombre nuevamente",10,0
     mensajeArchivoVacio     db  "El archivo ingresado esta vacio",10,0
     mensajeTruncamiento     db  "~~AVISO: El archivo ingresado tiene mas de 30 numeros, el vector fue llenado con los primeros 30 valores.~~",10,10,0
-    mensajePasosIntermedios db  "¿Desea que se muestren los pasos intermedios uno a uno? (Y para mostrar solo la siguiente iteracion, N para mostrar todas las iteraciones, X para mostrar solo el resultado final): ",0
+    mensajePasosIntermedios db  "¿Desea mostrar solo la siguiente iteracion? (Y para mostrar solo la siguiente iteracion, N para mostrar todas las iteraciones, X para mostrar solo el resultado final): ",0
     mensajeInicioIteracion  db  "-> Iteracion N°%i:",10,0
     mensajeFinIteracion     db  "-> Estado del vector despues de la iteracion %i:",10,0
     mensajeNoSwaps          db  "No hubo swaps en esta iteracion",0
@@ -366,6 +366,9 @@ imprimirSwap:
     push    rbx
     push    r8
     call    printf
+    mov     rbx,0
+    call    imprimirVector
+
     pop     r8
     pop     rbx
     pop     rcx
