@@ -364,7 +364,7 @@ ret
 
 ;Imprime el vector usando codigos de escape ANSI.
 imprimirVectorColor:
-    cmp     r12,rbx
+    cmp     r13,rbx
     jne     chequearSegundo
 
     mov     rdi,fondoColor
@@ -373,7 +373,7 @@ imprimirVectorColor:
     jmp     continuarSinColor
 
 chequearSegundo:
-    cmp     r13,rbx
+    cmp     r14,rbx
     jne     continuarSinColor
 
     mov     rdi,fondoColorSegundo
@@ -404,8 +404,8 @@ ret
 
 
 imprimirSwap:
-    mov     r12,r8
-    mov     r13,r9
+    mov     r13,r8
+    mov     r14,r9
     mov     rdi,mensajeSwap
     mov     rsi,r10
     mov     rdx,r11
