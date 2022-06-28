@@ -293,8 +293,12 @@ continuarImprimiendo:
     cmp     byte[mostrarIntermedios],'N'
     je      continuarOrdenamiento
 
+preguntarSiguienteIter:
     call    imprimirSiguienteIter
     call    validarPasosIntermedios
+    cmp     byte[inputValido],'N'
+    je      preguntarSiguienteIter
+
     call    imprimirEspacio
 
 continuarOrdenamiento:
